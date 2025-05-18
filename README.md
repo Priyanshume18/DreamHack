@@ -1,4 +1,3 @@
-Absolutely! Here's the full `README.md` content formatted in Markdown — you can directly paste this into your `README.md` file:
 
 ````markdown
 # 🧑‍⚕️ Skin Disease Detector & Health Chatbot
