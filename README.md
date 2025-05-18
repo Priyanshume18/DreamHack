@@ -66,7 +66,7 @@ The Vision Transformer (ViT) is a transformer encoder model pre-trained in a sel
 Install required packages using:
 
 ```
-pip install streamlit torch Pillow numpy together
+pip install streamlit torch Pillow numpy together tensorflow
 ```
 
 **Project Setup:**
@@ -74,22 +74,20 @@ pip install streamlit torch Pillow numpy together
 1. Clone the repository:
 
 ```
-git clone <your-repo-url>
-cd <your-repo>
+git clone https://github.com/Priyanshume18/DreamHack.git
+cd DreamHack
 ```
 
-2. Place the model file (`m1.pth`) in the project root directory.
-
-3. Set your Together API key in the script:
+2. Set your Together API key in the script:
 
 ```python
 client = Together(api_key="YOUR_API_KEY")
 ```
 
-4. Run the app:
+3. Run the app:
 
 ```
-streamlit run your_script.py
+streamlit run new.py
 ```
 
 Note: The chatbot will still work even if the model is not found, ensuring accessibility and usability of the app.
