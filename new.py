@@ -1,29 +1,37 @@
 import streamlit as st
-st.set_page_config(page_title="Skin Disease Detector & Health Chatbot", layout="wide")  # MUST BE FIRST
-
 from PIL import Image
 import numpy as np
 import torch
-import os
+from transformers import AutoModelForImageClassification, AutoImageProcessor
 from together import Together
 
-# Safe model loading without Streamlit calls inside
+st.set_page_config(page_title="Skin Disease Detector & Health Chatbot", layout="wide")  # MUST BE FIRST
+
+# ================== Load Hugging Face Model ================== #
 @st.cache_resource
-def load_model():
-    try:
-        model = torch.load("m1.pth", map_location=torch.device('cpu'))
-        model.eval()
-        return model
-    except Exception:
-        return None
+def load_hf_model():
+    repo_name = "Jayanth2002/dinov2-base-finetuned-SkinDisease"
+    processor = AutoImageProcessor.from_pretrained(repo_name)
+    model = AutoModelForImageClassification.from_pretrained(repo_name)
+    model.eval()
+    return model, processor
 
-model = load_model()
+hf_model, image_processor = load_hf_model()
 
-# Show a warning if model is not available
-if model is None:
-    st.warning("⚠️ Model file 'm1.pth' not found or failed to load. Skin disease detection will be disabled.")
+# Class names
+class_names = [
+    'Basal Cell Carcinoma', 'Darier_s Disease', 'Epidermolysis Bullosa Pruriginosa',
+    'Hailey-Hailey Disease', 'Herpes Simplex', 'Impetigo', 'Larva Migrans',
+    'Leprosy Borderline', 'Leprosy Lepromatous', 'Leprosy Tuberculoid', 'Lichen Planus',
+    'Lupus Erythematosus Chronicus Discoides', 'Melanoma', 'Molluscum Contagiosum',
+    'Mycosis Fungoides', 'Neurofibromatosis', 'Papilomatosis Confluentes And Reticulate',
+    'Pediculosis Capitis', 'Pityriasis Rosea', 'Porokeratosis Actinic', 'Psoriasis',
+    'Tinea Corporis', 'Tinea Nigra', 'Tungiasis', 'actinic keratosis', 'dermatofibroma',
+    'nevus', 'pigmented benign keratosis', 'seborrheic keratosis', 'squamous cell carcinoma',
+    'vascular lesion'
+]
 
-# Create layout
+# ================== Layout ================== #
 col1, col2 = st.columns([7, 3])
 
 # ============== LEFT COLUMN: Skin Disease Detector ============== #
@@ -33,34 +41,26 @@ with col1:
 
     if uploaded_file:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_column_width=True)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
 
-        if model:
-            # Preprocess image to feed into model
-            img = image.resize((224, 224))  # Resize as per model input
-            img = np.array(img) / 255.0  # Normalize
-            if img.ndim == 2:  # grayscale to RGB
-                img = np.stack([img]*3, axis=-1)
-            img = img.transpose((2, 0, 1))  # Convert to CxHxW
-            img_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        with st.spinner("Analyzing..."):
+            encoding = image_processor(image.convert("RGB"), return_tensors="pt")
+            with torch.no_grad():
+                outputs = hf_model(**encoding)
+                logits = outputs.logits
+                predicted_class_idx = logits.argmax(-1).item()
 
-            with st.spinner("Analyzing..."):
-                output = model(img_tensor)
-                prediction = torch.sigmoid(output).item()
+            predicted_class_name = class_names[predicted_class_idx]
 
-                if prediction > 0.5:
-                    st.error("⚠️ Possible Skin Disease Detected!")
-                else:
-                    st.success("✅ Skin Appears Healthy.")
-        else:
-            st.info("Model not available. Please upload `m1.pth` to enable diagnosis.")
+            st.subheader("🔍 Prediction:")
+            st.success(f"**Detected Skin Condition:** {predicted_class_name}")
 
 # ============== RIGHT COLUMN: Medical Chatbot ============== #
 with col2:
     st.markdown("### 🩺 Health Chatbot")
 
     # Initialize Together API
-    client = Together(api_key="YOUR API KEY")
+    client = Together(api_key="YOUR API KEY") 
 
     if "messages" not in st.session_state:
         st.session_state.messages = [
